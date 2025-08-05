@@ -1,7 +1,0 @@
-
-how this fella works
-
-starting data
-connect back to home (ip:port)
-gain full controll
-be sigmastick
